@@ -1,5 +1,7 @@
 # flutter_avif
 
+!!! TEMP FORK WITH https://github.com/yekeskin/flutter_avif/pull/90 !!!
+
 A flutter plugin to view and encode avif images.
 
 ## Installation

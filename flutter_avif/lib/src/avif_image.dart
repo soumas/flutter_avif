@@ -2,16 +2,16 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
-import 'package:flutter/semantics.dart';
-import 'dart:ui' as ui;
-import 'package:http/http.dart' as http;
 import 'package:flutter_avif_platform_interface/flutter_avif_platform_interface.dart'
     as avif_platform;
+import 'package:http/http.dart' as http;
 
 /// Used to support both Flutter 2.x.x and 3.x.x
 ///
@@ -46,7 +46,7 @@ class AvifImage extends StatefulWidget {
   State<AvifImage> createState() => AvifImageState();
 
   const AvifImage({
-    Key? key,
+    super.key,
     required this.image,
     double scale = 1.0,
     this.width,
@@ -69,11 +69,11 @@ class AvifImage extends StatefulWidget {
     this.gaplessPlayback = false,
     this.frameBuilder,
     this.loadingBuilder,
-  }) : super(key: key);
+  });
 
   AvifImage.file(
     File file, {
-    Key? key,
+    super.key,
     double scale = 1.0,
     this.width,
     this.height,
@@ -95,22 +95,21 @@ class AvifImage extends StatefulWidget {
     this.excludeFromSemantics = false,
     this.gaplessPlayback = false,
     this.frameBuilder,
-  })  : image = avif_platform.FlutterAvifPlatform.useNativeDecoder
-            ? FileImage(
-                file,
-                scale: scale,
-              ) as ImageProvider
-            : FileAvifImage(
-                file,
-                scale: scale,
-                overrideDurationMs: overrideDurationMs,
-              ),
-        loadingBuilder = null,
-        super(key: key);
+  }) : image = avif_platform.FlutterAvifPlatform.useNativeDecoder
+           ? FileImage(file, scale: scale) as ImageProvider
+           : FileAvifImage(
+               file,
+               scale: scale,
+               overrideDurationMs: overrideDurationMs,
+             ),
+       loadingBuilder = null {
+    // TODO: implement AvifImage.file
+    throw UnimplementedError();
+  }
 
   AvifImage.asset(
     String name, {
-    Key? key,
+    super.key,
     double scale = 1.0,
     this.width,
     this.height,
@@ -133,23 +132,19 @@ class AvifImage extends StatefulWidget {
     this.gaplessPlayback = false,
     this.frameBuilder,
     AssetBundle? bundle,
-  })  : image = avif_platform.FlutterAvifPlatform.useNativeDecoder
-            ? AssetImage(
-                name,
-                bundle: bundle,
-              ) as ImageProvider
-            : AssetAvifImage(
-                name,
-                scale: scale,
-                overrideDurationMs: overrideDurationMs,
-                bundle: bundle,
-              ),
-        loadingBuilder = null,
-        super(key: key);
+  }) : image = avif_platform.FlutterAvifPlatform.useNativeDecoder
+           ? AssetImage(name, bundle: bundle) as ImageProvider
+           : AssetAvifImage(
+               name,
+               scale: scale,
+               overrideDurationMs: overrideDurationMs,
+               bundle: bundle,
+             ),
+       loadingBuilder = null;
 
   AvifImage.network(
     String url, {
-    Key? key,
+    super.key,
     double scale = 1.0,
     this.width,
     this.height,
@@ -173,23 +168,18 @@ class AvifImage extends StatefulWidget {
     this.frameBuilder,
     this.loadingBuilder,
     Map<String, String>? headers,
-  })  : image = avif_platform.FlutterAvifPlatform.useNativeDecoder
-            ? NetworkImage(
-                url,
-                scale: scale,
-                headers: headers,
-              ) as ImageProvider
-            : NetworkAvifImage(
-                url,
-                scale: scale,
-                overrideDurationMs: overrideDurationMs,
-                headers: headers,
-              ),
-        super(key: key);
+  }) : image = avif_platform.FlutterAvifPlatform.useNativeDecoder
+           ? NetworkImage(url, scale: scale, headers: headers) as ImageProvider
+           : NetworkAvifImage(
+               url,
+               scale: scale,
+               overrideDurationMs: overrideDurationMs,
+               headers: headers,
+             );
 
   AvifImage.memory(
     Uint8List bytes, {
-    Key? key,
+    super.key,
     double scale = 1.0,
     this.width,
     this.height,
@@ -211,18 +201,14 @@ class AvifImage extends StatefulWidget {
     this.excludeFromSemantics = false,
     this.gaplessPlayback = false,
     this.frameBuilder,
-  })  : image = avif_platform.FlutterAvifPlatform.useNativeDecoder
-            ? MemoryImage(
-                bytes,
-                scale: scale,
-              ) as ImageProvider
-            : MemoryAvifImage(
-                bytes,
-                scale: scale,
-                overrideDurationMs: overrideDurationMs,
-              ),
-        loadingBuilder = null,
-        super(key: key);
+  }) : image = avif_platform.FlutterAvifPlatform.useNativeDecoder
+           ? MemoryImage(bytes, scale: scale) as ImageProvider
+           : MemoryAvifImage(
+               bytes,
+               scale: scale,
+               overrideDurationMs: overrideDurationMs,
+             ),
+       loadingBuilder = null;
 }
 
 class AvifImageState extends State<AvifImage> with WidgetsBindingObserver {
@@ -402,10 +388,11 @@ class AvifImageState extends State<AvifImage> with WidgetsBindingObserver {
   }
 
   void _updateInvertColors() {
-    _invertColors = MediaQuery.maybeOf(context)?.invertColors ??
-        _ambiguate(SemanticsBinding.instance)
-            ?.accessibilityFeatures
-            .invertColors ??
+    _invertColors =
+        MediaQuery.maybeOf(context)?.invertColors ??
+        _ambiguate(
+          SemanticsBinding.instance,
+        )?.accessibilityFeatures.invertColors ??
         false;
   }
 
@@ -419,13 +406,14 @@ class AvifImageState extends State<AvifImage> with WidgetsBindingObserver {
       context: _scrollAwareContext,
       imageProvider: widget.image,
     );
-    final ImageStream newStream =
-        provider.resolve(createLocalImageConfiguration(
-      context,
-      size: widget.width != null && widget.height != null
-          ? Size(widget.width!, widget.height!)
-          : null,
-    ));
+    final ImageStream newStream = provider.resolve(
+      createLocalImageConfiguration(
+        context,
+        size: widget.width != null && widget.height != null
+            ? Size(widget.width!, widget.height!)
+            : null,
+      ),
+    );
 
     _updateSourceStream(newStream);
   }
@@ -489,11 +477,7 @@ class AvifImageState extends State<AvifImage> with WidgetsBindingObserver {
     return Stack(
       alignment: Alignment.center,
       children: <Widget>[
-        const Positioned.fill(
-          child: Placeholder(
-            color: Color(0xCF8D021F),
-          ),
-        ),
+        const Positioned.fill(child: Placeholder(color: Color(0xCF8D021F))),
         Padding(
           padding: const EdgeInsets.all(4.0),
           child: FittedBox(
@@ -502,9 +486,7 @@ class AvifImageState extends State<AvifImage> with WidgetsBindingObserver {
               textAlign: TextAlign.center,
               textDirection: TextDirection.ltr,
               style: const TextStyle(
-                shadows: <Shadow>[
-                  Shadow(blurRadius: 1.0),
-                ],
+                shadows: <Shadow>[Shadow(blurRadius: 1.0)],
               ),
             ),
           ),
@@ -532,7 +514,9 @@ class FileAvifImage extends ImageProvider<FileAvifImage> {
 
   @override
   ImageStreamCompleter loadImage(
-      FileAvifImage key, ImageDecoderCallback decode) {
+    FileAvifImage key,
+    ImageDecoderCallback decode,
+  ) {
     return AvifImageStreamCompleter(
       key: key,
       codec: _loadAsync(key, decode),
@@ -621,29 +605,30 @@ class AssetAvifImage extends ImageProvider<AssetAvifImage> {
 
     AssetManifest.loadFromAssetBundle(chosenBundle)
         .then((AssetManifest manifest) {
-      final Iterable<AssetMetadata>? candidateVariants =
-          manifest.getAssetVariants(asset);
-      final AssetMetadata chosenVariant = _chooseVariant(
-        asset,
-        configuration,
-        candidateVariants,
-      );
-      final AssetAvifImage key = AssetAvifImage(
-        chosenVariant.key,
-        bundle: chosenBundle,
-        scale: chosenVariant.targetDevicePixelRatio ?? _naturalResolution,
-      );
+          final Iterable<AssetMetadata>? candidateVariants = manifest
+              .getAssetVariants(asset);
+          final AssetMetadata chosenVariant = _chooseVariant(
+            asset,
+            configuration,
+            candidateVariants,
+          );
+          final AssetAvifImage key = AssetAvifImage(
+            chosenVariant.key,
+            bundle: chosenBundle,
+            scale: chosenVariant.targetDevicePixelRatio ?? _naturalResolution,
+          );
 
-      if (completer != null) {
-        completer.complete(key);
-      } else {
-        result = SynchronousFuture<AssetAvifImage>(key);
-      }
-    }).onError((Object error, StackTrace stack) {
-      assert(completer != null);
-      assert(result == null);
-      completer!.completeError(error, stack);
-    });
+          if (completer != null) {
+            completer.complete(key);
+          } else {
+            result = SynchronousFuture<AssetAvifImage>(key);
+          }
+        })
+        .onError((Object error, StackTrace stack) {
+          assert(completer != null);
+          assert(result == null);
+          completer!.completeError(error, stack);
+        });
 
     if (result != null) {
       return result!;
@@ -655,7 +640,9 @@ class AssetAvifImage extends ImageProvider<AssetAvifImage> {
 
   @override
   ImageStreamCompleter loadImage(
-      AssetAvifImage key, ImageDecoderCallback decode) {
+    AssetAvifImage key,
+    ImageDecoderCallback decode,
+  ) {
     return AvifImageStreamCompleter(
       key: key,
       codec: _loadAsync(key, decode),
@@ -706,18 +693,24 @@ class AssetAvifImage extends ImageProvider<AssetAvifImage> {
         candidateVariants.isEmpty ||
         config.devicePixelRatio == null) {
       return AssetMetadata(
-          key: mainAssetKey, targetDevicePixelRatio: null, main: true);
+        key: mainAssetKey,
+        targetDevicePixelRatio: null,
+        main: true,
+      );
     }
 
     final SplayTreeMap<double, AssetMetadata> candidatesByDevicePixelRatio =
         SplayTreeMap<double, AssetMetadata>();
     for (final AssetMetadata candidate in candidateVariants) {
-      candidatesByDevicePixelRatio[
-          candidate.targetDevicePixelRatio ?? _naturalResolution] = candidate;
+      candidatesByDevicePixelRatio[candidate.targetDevicePixelRatio ??
+              _naturalResolution] =
+          candidate;
     }
 
     return _findBestVariant(
-        candidatesByDevicePixelRatio, config.devicePixelRatio!);
+      candidatesByDevicePixelRatio,
+      config.devicePixelRatio!,
+    );
   }
 
   AssetMetadata _findBestVariant(
@@ -779,17 +772,15 @@ class NetworkAvifImage extends ImageProvider<NetworkAvifImage> {
 
   @override
   ImageStreamCompleter loadImage(
-      NetworkAvifImage key, ImageDecoderCallback decode) {
+    NetworkAvifImage key,
+    ImageDecoderCallback decode,
+  ) {
     final StreamController<ImageChunkEvent> chunkEvents =
         StreamController<ImageChunkEvent>();
 
     return AvifImageStreamCompleter(
       key: key,
-      codec: _loadAsync(
-        key,
-        decode,
-        chunkEvents,
-      ),
+      codec: _loadAsync(key, decode, chunkEvents),
       scale: key.scale,
       debugLabel: key.url,
       informationCollector: () => <DiagnosticsNode>[
@@ -810,14 +801,15 @@ class NetworkAvifImage extends ImageProvider<NetworkAvifImage> {
     headers?.forEach((String name, String value) {
       httpRequest.headers[name.toLowerCase()] = value;
     });
-    if(!httpRequest.headers.containsKey("accept")) {
+    if (!httpRequest.headers.containsKey("accept")) {
       httpRequest.headers["accept"] = "image/avif";
     }
 
     final httpResponse = await httpRequest.send();
     if (httpResponse.statusCode != HttpStatus.ok) {
       throw StateError(
-          '$url cannot be loaded as an image. Http error code ${httpResponse.statusCode}');
+        '$url cannot be loaded as an image. Http error code ${httpResponse.statusCode}',
+      );
     }
 
     final b = BytesBuilder();
@@ -827,10 +819,12 @@ class NetworkAvifImage extends ImageProvider<NetworkAvifImage> {
     await for (final newBytes in httpResponse.stream) {
       cumulative += newBytes.length;
       b.add(newBytes);
-      chunkEvents.add(ImageChunkEvent(
-        cumulativeBytesLoaded: cumulative,
-        expectedTotalBytes: total,
-      ));
+      chunkEvents.add(
+        ImageChunkEvent(
+          cumulativeBytesLoaded: cumulative,
+          expectedTotalBytes: total,
+        ),
+      );
     }
     final bytes = b.takeBytes();
 
@@ -891,7 +885,9 @@ class MemoryAvifImage extends ImageProvider<MemoryAvifImage> {
 
   @override
   ImageStreamCompleter loadImage(
-      MemoryAvifImage key, ImageDecoderCallback decode) {
+    MemoryAvifImage key,
+    ImageDecoderCallback decode,
+  ) {
     return AvifImageStreamCompleter(
       key: key,
       codec: _loadAsync(key, decode),
@@ -901,7 +897,9 @@ class MemoryAvifImage extends ImageProvider<MemoryAvifImage> {
   }
 
   Future<AvifCodec> _loadAsync(
-      MemoryAvifImage key, ImageDecoderCallback decode) async {
+    MemoryAvifImage key,
+    ImageDecoderCallback decode,
+  ) async {
     assert(key == this);
 
     final bytesUint8List = bytes.buffer.asUint8List(0);
@@ -990,16 +988,23 @@ class MultiFrameAvifCodec implements AvifCodec {
   @override
   Future<AvifFrameInfo> getNextFrame() async {
     final Completer<AvifFrameInfo> completer = Completer<AvifFrameInfo>.sync();
-    final String? error =
-        _getNextFrame((ui.Image? image, int durationMilliseconds) {
+    final String? error = _getNextFrame((
+      ui.Image? image,
+      int durationMilliseconds,
+    ) {
       if (image == null) {
-        completer.completeError(Exception(
-            'Codec failed to produce an image, possibly due to invalid image data.'));
+        completer.completeError(
+          Exception(
+            'Codec failed to produce an image, possibly due to invalid image data.',
+          ),
+        );
       } else {
-        completer.complete(AvifFrameInfo(
-          image: image,
-          duration: Duration(milliseconds: durationMilliseconds),
-        ));
+        completer.complete(
+          AvifFrameInfo(
+            image: image,
+            duration: Duration(milliseconds: durationMilliseconds),
+          ),
+        );
       }
     });
     if (error != null) {
@@ -1045,9 +1050,7 @@ class SingleFrameAvifCodec implements AvifCodec {
 
   final Uint8List _bytes;
 
-  SingleFrameAvifCodec({
-    required Uint8List bytes,
-  }) : _bytes = bytes;
+  SingleFrameAvifCodec({required Uint8List bytes}) : _bytes = bytes;
 
   @override
   Future<void> ready() async {}
@@ -1055,16 +1058,23 @@ class SingleFrameAvifCodec implements AvifCodec {
   @override
   Future<AvifFrameInfo> getNextFrame() async {
     final Completer<AvifFrameInfo> completer = Completer<AvifFrameInfo>.sync();
-    final String? error =
-        _getNextFrame((ui.Image? image, int durationMilliseconds) {
+    final String? error = _getNextFrame((
+      ui.Image? image,
+      int durationMilliseconds,
+    ) {
       if (image == null) {
-        completer.completeError(Exception(
-            'Codec failed to produce an image, possibly due to invalid image data.'));
+        completer.completeError(
+          Exception(
+            'Codec failed to produce an image, possibly due to invalid image data.',
+          ),
+        );
       } else {
-        completer.complete(AvifFrameInfo(
-          image: image,
-          duration: Duration(milliseconds: durationMilliseconds),
-        ));
+        completer.complete(
+          AvifFrameInfo(
+            image: image,
+            duration: Duration(milliseconds: durationMilliseconds),
+          ),
+        );
       }
     });
     if (error != null) {
@@ -1113,20 +1123,22 @@ class AvifImageStreamCompleter extends ImageStreamCompleter {
     String? debugLabel,
     Stream<ImageChunkEvent>? chunkEvents,
     InformationCollector? informationCollector,
-  })  : _informationCollector = informationCollector,
-        _scale = scale,
-        _key = key {
+  }) : _informationCollector = informationCollector,
+       _scale = scale,
+       _key = key {
     this.debugLabel = debugLabel;
-    codec.then<void>(_handleCodecReady,
-        onError: (Object error, StackTrace stack) {
-      reportError(
-        context: ErrorDescription('resolving an image codec'),
-        exception: error,
-        stack: stack,
-        informationCollector: informationCollector,
-        silent: true,
-      );
-    });
+    codec.then<void>(
+      _handleCodecReady,
+      onError: (Object error, StackTrace stack) {
+        reportError(
+          context: ErrorDescription('resolving an image codec'),
+          exception: error,
+          stack: stack,
+          informationCollector: informationCollector,
+          silent: true,
+        );
+      },
+    );
     if (chunkEvents != null) {
       _chunkSubscription = chunkEvents.listen(
         reportImageChunkEvent,
@@ -1171,11 +1183,13 @@ class AvifImageStreamCompleter extends ImageStreamCompleter {
     if (!hasListeners) return;
     assert(_nextFrame != null);
     if (_isFirstFrame() || _hasFrameDurationPassed(timestamp)) {
-      _emitFrame(ImageInfo(
-        image: _nextFrame!.image.clone(),
-        scale: _scale,
-        debugLabel: debugLabel,
-      ));
+      _emitFrame(
+        ImageInfo(
+          image: _nextFrame!.image.clone(),
+          scale: _scale,
+          debugLabel: debugLabel,
+        ),
+      );
       _shownTimestamp = timestamp;
       _frameDuration = _nextFrame!.duration;
       _nextFrame!.image.dispose();
@@ -1218,11 +1232,13 @@ class AvifImageStreamCompleter extends ImageStreamCompleter {
       if (!hasListeners) {
         return;
       }
-      _emitFrame(ImageInfo(
-        image: _nextFrame!.image.clone(),
-        scale: _scale,
-        debugLabel: debugLabel,
-      ));
+      _emitFrame(
+        ImageInfo(
+          image: _nextFrame!.image.clone(),
+          scale: _scale,
+          debugLabel: debugLabel,
+        ),
+      );
       _nextFrame!.image.dispose();
       _nextFrame = null;
       return;
@@ -1235,8 +1251,9 @@ class AvifImageStreamCompleter extends ImageStreamCompleter {
       return;
     }
     _frameCallbackScheduled = true;
-    _ambiguate(SchedulerBinding.instance)!
-        .scheduleFrameCallback(_handleAppFrame);
+    _ambiguate(
+      SchedulerBinding.instance,
+    )!.scheduleFrameCallback(_handleAppFrame);
   }
 
   void _emitFrame(ImageInfo imageInfo) {

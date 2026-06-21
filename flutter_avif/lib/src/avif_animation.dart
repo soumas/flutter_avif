@@ -39,7 +39,7 @@ class AvifAnimation extends StatefulWidget {
 
   /// Creates a widget that displays a controllable avif.
   const AvifAnimation({
-    Key? key,
+    super.key,
     required this.image,
     this.controller,
     this.loadingBuilder,
@@ -56,7 +56,7 @@ class AvifAnimation extends StatefulWidget {
     this.centerSlice,
     this.matchTextDirection = false,
     this.useCache = true,
-  }) : super(key: key);
+  });
 
   @override
   State<AvifAnimation> createState() => _AvifAnimationState();
@@ -84,10 +84,7 @@ class AvifAnimationInfo {
   final List<ImageInfo> frames;
   final Duration duration;
 
-  const AvifAnimationInfo({
-    required this.frames,
-    required this.duration,
-  });
+  const AvifAnimationInfo({required this.frames, required this.duration});
 }
 
 class _AvifAnimationState extends State<AvifAnimation>
@@ -121,13 +118,13 @@ class _AvifAnimationState extends State<AvifAnimation>
     return widget.loadingBuilder != null && _frame == null
         ? widget.loadingBuilder!(context)
         : widget.excludeFromSemantics
-            ? image
-            : Semantics(
-                container: widget.semanticLabel != null,
-                image: true,
-                label: widget.semanticLabel ?? '',
-                child: image,
-              );
+        ? image
+        : Semantics(
+            container: widget.semanticLabel != null,
+            image: true,
+            label: widget.semanticLabel ?? '',
+            child: image,
+          );
   }
 
   @override
@@ -167,15 +164,15 @@ class _AvifAnimationState extends State<AvifAnimation>
 
   /// Get unique image string from [ImageProvider]
   String _getImageKey(ImageProvider provider) {
-   return provider is NetworkAvifImage
+    return provider is NetworkAvifImage
         ? provider.url
-            : provider is AssetAvifImage
-                ? provider.asset
-                : provider is FileAvifImage
-                    ? provider.file.path
-                    : provider is MemoryAvifImage
-                        ? provider.bytes.toString()
-                        : "";
+        : provider is AssetAvifImage
+        ? provider.asset
+        : provider is FileAvifImage
+        ? provider.file.path
+        : provider is MemoryAvifImage
+        ? provider.bytes.toString()
+        : "";
   }
 
   /// Calculates the [_frameIndex] based on the [AnimationController] value.
@@ -200,15 +197,17 @@ class _AvifAnimationState extends State<AvifAnimation>
 
     AvifAnimationInfo avif = widget.useCache
         ? AvifAnimation.cache.caches.containsKey(_getImageKey(widget.image))
-            ? AvifAnimation.cache.caches[_getImageKey(widget.image)]!
-            : await _fetchFrames(widget.image)
+              ? AvifAnimation.cache.caches[_getImageKey(widget.image)]!
+              : await _fetchFrames(widget.image)
         : await _fetchFrames(widget.image);
 
     if (!mounted) return;
 
     if (widget.useCache) {
-      AvifAnimation.cache.caches
-          .putIfAbsent(_getImageKey(widget.image), () => avif);
+      AvifAnimation.cache.caches.putIfAbsent(
+        _getImageKey(widget.image),
+        () => avif,
+      );
     }
 
     setState(() {
@@ -231,13 +230,14 @@ class _AvifAnimationState extends State<AvifAnimation>
       final Uri resolved = Uri.base.resolve(provider.url);
       final httpRequest = http.Request('GET', resolved);
       provider.headers?.forEach(
-          (String name, String value) => httpRequest.headers[name] = value);
+        (String name, String value) => httpRequest.headers[name] = value,
+      );
       final httpResponse = await httpRequest.send();
       bytes = await httpResponse.stream.toBytes();
     } else if (provider is AssetAvifImage) {
-      bytes = (await (provider.bundle ?? rootBundle).load(provider.asset))
-          .buffer
-          .asUint8List();
+      bytes = (await (provider.bundle ?? rootBundle).load(
+        provider.asset,
+      )).buffer.asUint8List();
     } else if (provider is FileAvifImage) {
       bytes = await provider.file.readAsBytes();
     } else if (provider is MemoryAvifImage) {
